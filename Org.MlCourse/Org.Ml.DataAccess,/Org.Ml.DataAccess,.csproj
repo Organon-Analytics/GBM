@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Org.Ml.DataAccess_</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="PostgreSql\" />
+  </ItemGroup>
+
+</Project>
