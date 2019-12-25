@@ -3,8 +3,7 @@
     public enum ColumnMeasurementType
     {
         Categorical,
-        Ordinal,
-        Scale,
+        Numerical,
         Other
     }
 }

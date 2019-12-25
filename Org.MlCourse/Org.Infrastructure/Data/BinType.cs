@@ -6,7 +6,7 @@ namespace Org.Infrastructure.Data
 {
     public enum BinType
     {
-        NumericalBin,
-        CategoricalBin
+        Categorical,
+        Numerical
     }
 }

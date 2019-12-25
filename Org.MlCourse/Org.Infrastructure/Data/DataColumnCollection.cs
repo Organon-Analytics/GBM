@@ -17,5 +17,20 @@ namespace Org.Infrastructure.Data
             }
             return output;
         }
+
+        public int[] GetValidIndices()
+        {
+            var list = new List<int>();
+            foreach (var item in this)
+            {
+                var mType = item.Value.MeasurementType;
+                if (mType == ColumnMeasurementType.Categorical || mType == ColumnMeasurementType.Numerical)
+                {
+                    list.Add(item.Value.Order);
+                }
+            }
+            list.Sort();
+            return list.ToArray();
+        }
     }
 }
