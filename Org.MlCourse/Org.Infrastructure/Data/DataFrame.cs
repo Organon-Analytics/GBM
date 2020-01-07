@@ -1,6 +1,7 @@
 ﻿using Org.Infrastructure.Collections;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Org.Infrastructure.Data
@@ -10,6 +11,9 @@ namespace Org.Infrastructure.Data
         private IDictionary<string, Bin> _binCollection;
         private Bijection<string, int> _columnOrder;
         public DataColumnCollection _columnCollection;
+
+        private IDictionary<string, int[]> _integerFrame;
+
 
         private IDictionary<string, List<int>> _rawCategorical;
         private IDictionary<string, List<float>> _rawNumerical;
@@ -41,7 +45,6 @@ namespace Org.Infrastructure.Data
                 }
             }
         }
-
         public void Add(int order, string s)
         {
             var name = _columnOrder[order];
@@ -50,17 +53,41 @@ namespace Org.Infrastructure.Data
 
         private void AddCategorical(string name, string s)
         {
-            //var bin = (CategoricalBin)_binCollection[name];
-            //bin.Add(s);
-            //var idx = bin.GetIndex(s);
-            //_rawCategorical[name].Add(idx);
+            var bin = (CategoricalBin)_binCollection[name];
+            bin.Add(s);
+            var idx = bin.GetIndex(s);
+            _rawCategorical[name].Add(idx);
         }
 
         private void AddFloat(string name, string s)
         {
-            //var f = Single.NaN;
-            //var flag = Single.TryParse(s, out f);
-            //_rawNumerical[name].Add(flag ? f : Single.NaN);
+            var f = Single.NaN;
+            var flag = Single.TryParse(s, out f);
+            _rawNumerical[name].Add(flag ? f : Single.NaN);
         }
+
+        public void CreateBins(int maxBins)
+        {
+            if (_integerFrame == null)
+                _integerFrame = new Dictionary<string, int[]>();
+            var blas = BlasFactory.GetBlas();
+            var helper = new StatsFunctions(blas);
+            foreach (var item in _rawNumerical)
+            {
+                var name = item.Key;
+                var src = item.Value;
+                var thresholds = helper.GetQuantiles(src, maxBins);
+                if (thresholds == null) continue;
+                var bin = new NumericalBin(thresholds);
+                var dest = new int[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    dest[i] = bin.GetIndex(src[i]);
+                }
+                _binCollection.Add(name, bin);
+                _integerFrame.Add(name, dest);
+            }
+        }
+
     }
 }
