@@ -1,4 +1,5 @@
 ﻿using Org.Infrastructure.Collections;
+using Org.Infrastructure.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,15 +11,19 @@ namespace Org.Infrastructure.Data
     {
         private IDictionary<string, Bin> _binCollection;
         private Bijection<string, int> _columnOrder;
+
         public DataColumnCollection _columnCollection;
 
+        //POST-BINNING
         private IDictionary<string, int[]> _integerFrame;
 
-
+        //POST-READ
         private IDictionary<string, List<int>> _rawCategorical;
         private IDictionary<string, List<float>> _rawNumerical;
 
         private IDictionary<string, Action<string, string>> _actions;
+
+        private IBlas _blas;
         public void Initialize(DataColumnCollection collection, int capacity)
         {
             _columnCollection = collection;
@@ -66,12 +71,30 @@ namespace Org.Infrastructure.Data
             _rawNumerical[name].Add(flag ? f : Single.NaN);
         }
 
-        public void CreateBins(int maxBins)
+        public void SetBlas(IBlas blas)
+        {
+            _blas = blas;
+        }
+        public void CreateCategoricalBins()
+        {
+            var categoricalKeys = _rawCategorical.Keys.ToList();
+            _integerFrame = new Dictionary<string, int[]>();
+            foreach (var column in categoricalKeys)
+            {
+                var list = _rawCategorical[column];
+                _integerFrame.Add(column, list.ToArray());
+                _rawCategorical.Remove(column);
+            }
+        }
+
+        public void CreateNumericalBins(int maxBins)
         {
             if (_integerFrame == null)
                 _integerFrame = new Dictionary<string, int[]>();
-            var blas = BlasFactory.GetBlas();
-            var helper = new StatsFunctions(blas);
+
+
+
+            var helper = new StatsFunctions(_blas);
             foreach (var item in _rawNumerical)
             {
                 var name = item.Key;
@@ -79,8 +102,8 @@ namespace Org.Infrastructure.Data
                 var thresholds = helper.GetQuantiles(src, maxBins);
                 if (thresholds == null) continue;
                 var bin = new NumericalBin(thresholds);
-                var dest = new int[src.Length];
-                for (int i = 0; i < src.Length; i++)
+                var dest = new int[src.Count];
+                for (int i = 0; i < src.Count; i++)
                 {
                     dest[i] = bin.GetIndex(src[i]);
                 }
@@ -88,6 +111,5 @@ namespace Org.Infrastructure.Data
                 _integerFrame.Add(name, dest);
             }
         }
-
     }
 }
