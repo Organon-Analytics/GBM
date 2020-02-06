@@ -11,7 +11,7 @@ namespace Org.Ml.Domain.Model.Gbm
         {
             Feature = String.Empty;
             IsNumerical = false;
-            //IsNull = true;
+            IsNull = true;
             IntegerThreshold = -1;
             LeftInfoTraining = new BinInfo();
             RightInfoTraining = new BinInfo();
@@ -19,8 +19,8 @@ namespace Org.Ml.Domain.Model.Gbm
             LeftPrediction = Double.NaN;
             RightPrediction = Double.NaN;
             Gain = Double.MinValue;
-            //DefaultOnLeft = true;
-            //DoesDefaultExist = false;
+            DefaultOnLeft = true;
+            DoesDefaultExist = false;
         }
 
         /*! \brief Feature index */

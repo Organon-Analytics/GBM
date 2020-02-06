@@ -32,6 +32,13 @@ namespace Org.Infrastructure.Data
             _sumHessians += hessians;
         }
 
+        public void Subtract(double weights, double gradients, double hessians)
+        {
+            _sumWeights -= weights;
+            _sumGradients -= gradients;
+            _sumHessians -= hessians;
+        }
+
         public void Overwrite(double sumWeights, double sumGradients, double sumHessians)
         {
             _sumWeights = sumWeights;

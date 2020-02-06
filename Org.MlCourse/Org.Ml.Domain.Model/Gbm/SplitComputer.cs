@@ -1,4 +1,5 @@
 ﻿using Org.Infrastructure.Data;
+using Org.Ml.Domain.Model.Gbm;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,16 +9,17 @@ namespace Org.Ml.Domain.Model
     public class SplitComputer
     {
         private readonly string _featureName;
+        private BinType _binType;
         private readonly int _numBins;
         private readonly IDictionary<int, BinInfo[]> _data;
 
-        public SplitComputer(string featureName, int numBins)
+        public SplitComputer(string featureName, int numBins, BinType binType)
         {
             _featureName = featureName;
+            _binType = binType;
             _numBins = numBins;
             _data = new Dictionary<int, BinInfo[]>();
         }
-
 
         public void Add(IList<int> nodes)
         {
@@ -67,10 +69,62 @@ namespace Org.Ml.Domain.Model
             }
         }
 
-        //private void FindBestCategoricalSplit(BinInfo parent, BinInfo[] data, SplitInfo split,
-        //                                      bool doesDefaultExist, Gbm.GbmAlgorithmSettings algorithmSettings)
-        //{
+        public void FindBestSplit(IDictionary<int, SplitInfo> splits, TreeNodePool pool, GbmAlgorithmSettings algorithmSettings)
+        {
+            var nodes = splits.Keys;
+            foreach (var nodeId in nodes)
+            {
+                var parentT = pool.GetBinInfoTraining(nodeId);
+                var parentTGain = GetLeafSplitGain(parentT);
+                var binsT = _data[nodeId];
+                
 
-        //}
+                var split = splits[nodeId];
+                var defaultBinInfo = binsT[0];
+                var doesDefaultExist = (defaultBinInfo.SumWeights > 0);
+                split.DefaultIdx = Bin.DefaultIndex;
+                if (_binType == BinType.Numerical)
+                {
+                    ScanFromLeft(parentT, parentTGain, binsT, split, doesDefaultExist, algorithmSettings);
+                    if (doesDefaultExist)
+                    {
+                        ScanFromRight(parentT, parentTGain, binsT, split, true, algorithmSettings);
+                    }
+                }
+                else if (_binType == BinType.Categorical)
+                {
+                    FindBestCategoricalSplit(parentT, parentTGain, binsT, split, doesDefaultExist, algorithmSettings);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Invalid BinType enumeration");
+                }
+            }
+        }
+
+        private void ScanFromRight(BinInfo parentT, double parentTGain, BinInfo[] binsT, SplitInfo split, bool v, GbmAlgorithmSettings algorithmSettings)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ScanFromLeft(BinInfo parentT, double parentTGain, BinInfo[] binsT, SplitInfo split, bool doesDefaultExist, GbmAlgorithmSettings algorithmSettings)
+        {
+            throw new NotImplementedException();
+        }
+
+        private double GetLeafSplitGain(BinInfo info)
+        {
+            var sumGradients = info.SumGradients;
+            var sumHessians = info.SumHessians;
+            var absSumGradients = Math.Abs(sumGradients);
+            return (absSumGradients * absSumGradients) / (sumHessians);
+        }
+
+
+        private void FindBestCategoricalSplit(BinInfo parent, double parentInformation, BinInfo[] bins, SplitInfo split, 
+            bool doesDefaultExist, GbmAlgorithmSettings algorithmSettings)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

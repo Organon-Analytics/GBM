@@ -10,7 +10,7 @@ namespace Org.Ml.Domain.Model.Gbm
         {
             LearningRate = 0.01;          
             MaxDepth = 5;
-            MaxLeaves = 2;
+            MaxLeaves = 32;
             NumIterations = 1000;
             RowSamplingRate = 1.0;
             ColumnSamplingRate = 1.0;

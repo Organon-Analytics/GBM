@@ -9,21 +9,60 @@ namespace Org.Infrastructure.Data
 {
     public class DataFrame
     {
-        private IDictionary<string, Bin> _binCollection;
-        private Bijection<string, int> _columnOrder;
-
         public DataColumnCollection _columnCollection;
-
-        //POST-BINNING
-        private IDictionary<string, int[]> _integerFrame;
-
-        //POST-READ
+        private Bijection<string, int> _columnOrder;
+        
         private IDictionary<string, List<int>> _rawCategorical;
         private IDictionary<string, List<float>> _rawNumerical;
+        private IDictionary<string, int[]> _integerFrame;
 
         private IDictionary<string, Action<string, string>> _actions;
+        private IDictionary<string, Bin> _binCollection;
 
+        private Random _rng;
         private IBlas _blas;
+
+        private int[] _indices;
+        private int[] _trainingIndices;
+        private int[] _randomTrainingIndices;
+        private int[] _validationIndices;
+
+        public DataFrame()
+        {
+            _blas = new DotNetBlas();
+            _rng = new Random();
+
+            //_indices = new int[_baseFrame.RowCount];
+            //for (var i = 0; i < _indices.Length; i++)
+            //{
+            //    _indices[i] = i;
+            //}
+        }
+
+        public int[] GetTrainingIndices()
+        {
+            return _trainingIndices;
+        }
+
+        public int[] GetRandomTrainingIndices()
+        {
+            return _randomTrainingIndices;
+        }
+
+        public int[] GetValidationIndices()
+        {
+            return _validationIndices;
+        }
+
+        public int[] GetIndices()
+        {
+            return _indices;
+        }
+
+        public Bin GetBin(string column)
+        {
+            return _binCollection[column];
+        }
         public void Initialize(DataColumnCollection collection, int capacity)
         {
             _columnCollection = collection;
@@ -92,8 +131,6 @@ namespace Org.Infrastructure.Data
             if (_integerFrame == null)
                 _integerFrame = new Dictionary<string, int[]>();
 
-
-
             var helper = new StatsFunctions(_blas);
             foreach (var item in _rawNumerical)
             {
@@ -110,6 +147,50 @@ namespace Org.Infrastructure.Data
                 _binCollection.Add(name, bin);
                 _integerFrame.Add(name, dest);
             }
+        }
+
+        public void Partition(double trainingRatio)
+        {
+            var length = _indices.Length;
+            var tList = new List<int>(length);
+            var vList = new List<int>(length);
+            if (trainingRatio <= 0.0 || trainingRatio >= 1.0)
+            {
+                for (var i = 0; i < length; i++)
+                {
+                    tList.Add(i);
+                }
+                _trainingIndices = tList.ToArray();
+                _validationIndices = null;
+            }
+            else
+            {
+                for (var i = 0; i < length; i++)
+                {
+                    if (_rng.NextDouble() < trainingRatio)
+                    {
+                        tList.Add(i);
+                    }
+                    else
+                    {
+                        vList.Add(i);
+                    }
+                }
+                _trainingIndices = tList.ToArray();
+                _validationIndices = vList.ToArray();
+            }
+        }
+
+        public void RandomizeTrainingIndices(double rowSamplingRate)
+        {
+            var list = new List<int>(_trainingIndices.Length);
+            list.AddRange(_trainingIndices.Where(idx => _rng.NextDouble() < rowSamplingRate));
+            _randomTrainingIndices = list.ToArray();
+        }
+
+        public IList<string> GetRandomInputList(double columnSamplingRate)
+        {
+            throw new NotImplementedException();
         }
     }
 }
