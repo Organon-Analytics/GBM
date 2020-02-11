@@ -39,6 +39,11 @@ namespace Org.Infrastructure.Data
             //}
         }
 
+        public int[] GetIntegerArray(string columnName)
+        {
+            return _integerFrame[columnName];
+        }
+
         public int[] GetTrainingIndices()
         {
             return _trainingIndices;
@@ -191,6 +196,58 @@ namespace Org.Infrastructure.Data
         public IList<string> GetRandomInputList(double columnSamplingRate)
         {
             throw new NotImplementedException();
+        }
+
+        public int GetRowCount()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IList<string> GetConstantColumns()
+        {
+            var list = new List<string>();
+            foreach (var pair in _integerFrame)
+            {
+                var columnName = pair.Key;
+                var array = pair.Value;
+                var isConstant = _blas.IsConstant(array);
+                if (!isConstant) continue;
+                list.Add(columnName);
+            }
+            return list;
+        }
+
+        public bool IsConstant(string columnName)
+        {
+            if (!_integerFrame.ContainsKey(columnName))
+            {
+                throw new InvalidOperationException(
+                    String.Format("There is no data in the binned data with the column name {0}", columnName));
+            }
+            return _blas.IsConstant(_integerFrame[columnName]);
+        }
+
+        public string[] GetEligibleInputColumns(IList<string> inColumns, IList<string> excludedColumnList)
+        {
+            var all = GetBinnedColumnList();
+            var allMinusTarget = all.Except(excludedColumnList).ToList();
+            string[] temp;
+            if (inColumns != null && inColumns.Count > 0)
+            {
+                temp = allMinusTarget.Intersect(inColumns).ToArray();
+            }
+            else
+            {
+                temp = allMinusTarget.ToArray();
+            }
+            var constantColumns = GetConstantColumns();
+            var final = temp.Except(constantColumns).ToArray();
+            return final;
+        }
+
+        public IList<string> GetBinnedColumnList()
+        {
+            return _integerFrame.Keys.ToList();
         }
     }
 }

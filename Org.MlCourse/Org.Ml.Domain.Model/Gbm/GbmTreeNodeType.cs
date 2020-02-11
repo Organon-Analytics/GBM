@@ -4,7 +4,11 @@ using System.Text;
 
 namespace Org.Ml.Domain.Model.Gbm
 {
-    class GbmTreeNodeType
+    public enum GbmTreeNodeType
     {
+        Root,
+        Interim,
+        Leaf,
+        Orphan
     }
 }
