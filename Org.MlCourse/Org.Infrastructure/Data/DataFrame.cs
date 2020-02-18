@@ -17,7 +17,7 @@ namespace Org.Infrastructure.Data
         private IDictionary<string, int[]> _integerFrame;
 
         private IDictionary<string, Action<string, string>> _actions;
-        private IDictionary<string, Bin> _binCollection;
+        private Dictionary<string, Bin> _binCollection;
 
         private Random _rng;
         private IBlas _blas;
@@ -44,6 +44,11 @@ namespace Org.Infrastructure.Data
             return _integerFrame[columnName];
         }
 
+        //
+        public float[] GetDoubleRawArray(string columnName)
+        {
+            return _rawNumerical[columnName].ToArray();
+        }
         public int[] GetTrainingIndices()
         {
             return _trainingIndices;
@@ -62,6 +67,11 @@ namespace Org.Infrastructure.Data
         public int[] GetIndices()
         {
             return _indices;
+        }
+
+        public Dictionary<string, Bin> GetBinCollection()
+        {
+            return _binCollection;
         }
 
         public Bin GetBin(string column)

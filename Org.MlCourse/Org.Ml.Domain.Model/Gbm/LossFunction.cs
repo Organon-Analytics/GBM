@@ -1,10 +1,15 @@
 ﻿using Org.Infrastructure.Data;
+using Org.Infrastructure.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Org.Ml.Domain.Model.Gbm
 {
+    /// <summary>
+    /// A LossFunction abstractsand groups the necessary methods to build a Gbm model
+    /// Specifically, it returns the loss given the actual and predicted values
+    /// </summary>
     public abstract class LossFunction
     {
         public abstract void Initialize(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings, DataFrame frame);
@@ -21,7 +26,7 @@ namespace Org.Ml.Domain.Model.Gbm
         public abstract bool IsConstantHessian();
         public abstract Tuple<double, double> GetLoss(double[] scores);
 
-        public virtual Tuple<L2Output, L2Output> GetL2Loss(double[] scores)
+        public virtual Tuple<LeastSquaresOutput, LeastSquaresOutput> GetLeastSquaresLoss(double[] scores)
         {
             throw new InvalidOperationException("L2-Loss is not valid for this problem");
         }
@@ -40,12 +45,10 @@ namespace Org.Ml.Domain.Model.Gbm
         {
             switch (type)
             {
-                case LossFunctionType.RegressionL2:
-                    return new RegressionL2Loss();
-                case LossFunctionType.ClassificationBinary:
-                    return new ClassificationBinaryLoss();
-                case LossFunctionType.ClassificationMultiSoftMax:
-                    throw new NotImplementedException();
+                case LossFunctionType.LeastSquares:
+                    return new LeastSquaresLoss();
+                case LossFunctionType.CrossEntropy:
+                    return new CrossEntropyLoss();
                 default:
                     throw new NotImplementedException();
             }

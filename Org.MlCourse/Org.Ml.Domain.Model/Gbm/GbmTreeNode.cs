@@ -18,6 +18,9 @@ namespace Org.Ml.Domain.Model.Gbm
         private GbmTreeNode _left;
         private GbmTreeNode _right;
         private GbmTreeNode _orphan;
+
+
+        //bad
         private Func<int, GbmTreeNode> _navigator;
 
         private GbmTreeNode()
@@ -91,6 +94,7 @@ namespace Org.Ml.Domain.Model.Gbm
         {
             return _navigator(val);
         }
+
         public void Scale(double alpha)
         {
             if (alpha > 0.0)

@@ -9,14 +9,18 @@ namespace Org.Ml.Domain.Model.Gbm
 {
     public class GbmTreeLearner
     {
-        private double[] _weights;
+        #region External fields
         private GbmAlgorithmSettings _algorithmSettings;
         private ModellingDataSettings _dataSettings;
         private DataFrame _frame;
+        #endregion
 
+        #region Helper fields
+        private double[] _weights;
         private int[] _nodeIndices;
         private string[] _eligibleInputColumns;
         private IBlas _blas;
+        #endregion
 
         private const int RootNodeIdx = -1;
         public GbmTreeLearner(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings, DataFrame frame)
@@ -27,6 +31,9 @@ namespace Org.Ml.Domain.Model.Gbm
             _blas = new DotNetBlas();
         }
 
+        /// <summary>
+        /// Initialize some internal fields to be used in training the model
+        /// </summary>
         public void Initialize()
         {
             var rowCount = _frame.GetRowCount();
@@ -57,7 +64,7 @@ namespace Org.Ml.Domain.Model.Gbm
         /// <param name="gradients"></param>
         /// <param name="hessians"></param>
         /// <returns></returns>
-        public GbmTree Train(double[] gradients, double[] hessians)
+        public GbmTree Train(double[] gradients, double[] hessians, double[] delta)
         {
             //Randomize rows
             _frame.RandomizeTrainingIndices(_algorithmSettings.RowSamplingRate);
@@ -93,7 +100,7 @@ namespace Org.Ml.Domain.Model.Gbm
 
             // _nodeIndices data structure keeps the node-id for each row in the data as stored in _frame(DataFrame) object
             // These indices need to be updated whenever a new pair of nodes are created
-            // ResetNodeIndices method sets the node indices to a single value
+            // ResetNodeIndices method sets the node indices to a single value (-1)
             ResetNodeIndices(RootNodeIdx);
 
             // Create an empty GbmTree. The primary goal of Train(.) method is to fill out this object and return it
@@ -101,7 +108,7 @@ namespace Org.Ml.Domain.Model.Gbm
 
             // A SplitComputer computes the best split and produces a SplitInfo objects
             // A SplitComputer object is created per feature and this object is used several times in the while loop below
-            // Since it is a heavy object, it is efficient to create it once, and repopulate its data structures when needed
+            // Since it is a heavy object, it is efficient to create it once, and re-populate its data structures when needed
             var splitComputers = new Dictionary<string, SplitComputer>();
             foreach (var feature in sampledFeatures)
             {
@@ -160,7 +167,7 @@ namespace Org.Ml.Domain.Model.Gbm
                 // Henc, as the program exits the for loop, the best splits are computed per feature per active-node
                 foreach (var feature in sampledFeatures)
                 {
-                    var data = _frame.GetIntegerArray(feature);
+                    var data = _frame.GetIntegerArray(feature); 
                     var splitComputer = splitComputers[feature];
                     splitComputer.Add(smallNodes);
                     splitComputer.Aggregate(lengthTraining, orderedRowIndicesT, orderedNodeIndicesT, data, orderedWeightsT, orderedGradientsT, orderedHessiansT);
@@ -197,7 +204,9 @@ namespace Org.Ml.Domain.Model.Gbm
                 // Break the while loop
                 if (numLeafNodes >= _algorithmSettings.MaxLeaves) break;
             }
-            throw new NotImplementedException();
+            ComputeDelta(0, _nodeIndices, nodePool.PredictionByNode, delta);
+
+            return !tree.IsEmpty() ? tree : null;
         }
 
         private int UpdateOrderedData(List<int> smallNodes, int[] indices, int[] oIndices, int[] nodeIndices,
@@ -225,6 +234,17 @@ namespace Org.Ml.Domain.Model.Gbm
             return cursor;
         }
 
+        private unsafe void ComputeDelta(int offset, int[] nodeIndices, IDictionary<int, double> predictions, double[] delta)
+        {
+            fixed (double* dP = delta)
+            {
+                var pD = dP + offset;
+                for (var i = 0; i < nodeIndices.Length; i++)
+                {
+                    *pD++ = predictions[nodeIndices[i]];
+                }
+            }
+        }
         private IList<int> GetNodesToBeSplit(IDictionary<int, SplitInfo> splits, GbmTreeNodePool pool, int capacity)
         {
             var allNodes = pool.NodeLifeStatus.Keys.ToList();

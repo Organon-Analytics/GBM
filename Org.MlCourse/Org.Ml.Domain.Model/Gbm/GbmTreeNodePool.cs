@@ -8,7 +8,7 @@ namespace Org.Ml.Domain.Model.Gbm
 {
     public class GbmTreeNodePool
     {
-        private readonly IDictionary<int, KeyValuePair<int, int>> _nodeRelations;
+        private readonly IDictionary<int, KeyValuePair<int, int>> _nodeRelations; // key: -1, value: <0, 1>
         private readonly IDictionary<int, BinInfo> _trainingBinInfo;
         private readonly IDictionary<int, BinInfo> _validationBinInfo;
         private readonly IDictionary<int, bool> _nodeLifeStatus;

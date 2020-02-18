@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.Infrastructure.Data;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -49,5 +50,13 @@ namespace Org.Ml.Domain.Model.Gbm
 
         public bool SearchForHyperParameters { get; set; }
         public bool UseLineSearchForLearningRate { get; set; }
+
+        #region Hyper-parameter search
+        public FloatingPointGrid GridForLearningRate { get; set; }
+        public FloatingPointGrid GridForRowSamplingRate { get; set; }
+        public FloatingPointGrid GridForColumnSamplingRate { get; set; }
+        public IntegerGrid GridForMaxTreeLeaves { get; set; }
+        public IntegerGrid GridForMaxIterations { get; set; }
+        #endregion
     }
 }

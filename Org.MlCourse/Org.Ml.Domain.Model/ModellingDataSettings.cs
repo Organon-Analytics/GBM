@@ -14,6 +14,7 @@ namespace Org.Ml.Domain.Model
         public IList<string> IncludedColumns { get; set; }
         public IList<string> ExcludedColumns { get; set; }
         public string TargetColumnName { get; set; }
+        public string WeightColumnName { get; set; }
         public string PositiveCategory { get; set; }
         public string NegativeCategory { get; set; }
         public double TrainingRatio { get; set; }

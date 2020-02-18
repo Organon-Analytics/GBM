@@ -46,7 +46,7 @@ namespace Org.Ml.Domain.Model.Gbm
         /// </summary>
         /// <param name="inputs"></param>
         /// <returns></returns>
-        public double Score(IDictionary<string, int> inputs)
+        public double Score(IDictionary<string, int> inputs) 
         {
             var node = _root;
             while (true)

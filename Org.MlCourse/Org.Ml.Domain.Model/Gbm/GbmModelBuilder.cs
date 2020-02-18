@@ -7,14 +7,33 @@ using System.Text;
 
 namespace Org.Ml.Domain.Model.Gbm
 {
+    /// <summary>
+    /// GbmModelBuilder is a Domain Service that builds a GbmModel and returns it
+    /// It accepts two inputs: GbmAlgorithmSettings and ModellingDataSettings
+    /// GbmAlgorithmSettings contains the input parameters that are used to build model-building process:
+    /// Some of these parameters are hyper-parameters that needs to be optimized during model building process
+    /// ModellingDataSettings contains all the necessary information about the input data
+    /// </summary>
     public class GbmModelBuilder
     {
         private readonly GbmAlgorithmSettings _algorithmSettings;
         private readonly ModellingDataSettings _dataSettings;
-
+        /// <summary>
+        /// Multiple data frames are needed: 
+        /// Development sample is used to build and validate the model
+        /// Test sample is used to measure the final performance of the built&validated model
+        /// </summary>
         private readonly IDictionary<SampleType, DataFrame> _frames;
-
+        /// <summary>
+        /// Various results are produced as a result of the computation: model, run-time report, predictions on development sample
+        /// These data are embedded in a GbmModelBuilderResults object
+        /// </summary>
         private GbmModelBuilderResults _results;
+        /// <summary>
+        /// A single constructor to the class. Accepts the two input objects
+        /// </summary>
+        /// <param name="algorithmSettings"></param>
+        /// <param name="dataSettings"></param>
         public GbmModelBuilder(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings)
         {
             _algorithmSettings = algorithmSettings;
@@ -22,10 +41,19 @@ namespace Org.Ml.Domain.Model.Gbm
 
             _frames = new Dictionary<SampleType, DataFrame>();
         }
+        /// <summary>
+        /// Returns the results for further referencing after model has been built
+        /// </summary>
         public GbmModelBuilderResults GbmModelBuilderResults
         {
             get { return _results; }
         }
+        /// <summary>
+        /// Sets the related frame that will be used for development or testing
+        /// One can set DevelopmentFrame and TestFrame
+        /// </summary>
+        /// <param name="sampleType"></param>
+        /// <param name="frame"></param>
         public void SetFrame(SampleType sampleType, DataFrame frame)
         {
             if (_frames.ContainsKey(sampleType))
@@ -37,15 +65,28 @@ namespace Org.Ml.Domain.Model.Gbm
                 _frames.Add(sampleType, frame);
             }
         }
-
+        /// <summary>
+        /// This is the method that does the following:
+        /// 1 Build a GBM model
+        /// 2 Validate the model. Carry out hyper-parameter search if necessary
+        /// 3 Measure test performance if specified
+        /// 4 Produce and package results in a GbmModelBuilderResults object for later referencing
+        /// 5 Produce logs and reports
+        /// It takes a numOfThreads argument. The program becomes multi-threaded if (numOfThreads > 1)
+        /// </summary>
+        /// <param name="numOfThreads"></param>
         public void Execute(int numOfThreads)
         {
+            // _frames should contain a development sample. Throw an exception otherwise
             if (!_frames.ContainsKey(SampleType.Development))
             {
                 throw new ArgumentException("Development frame could not be found as input to Gbm algorithm");
             }
+            // Fetch the development sample
             var developmentFrame = _frames[SampleType.Development];
+            // GbmTreeLearner returns a single tree of a Gbm model
             var treeLearner = new GbmTreeLearner(_algorithmSettings, _dataSettings, developmentFrame);
+            // Initialize the private fields in treeLearner object
             treeLearner.Initialize();
 
             var loss = LossFunction.CreateLossFunction(_algorithmSettings.LossFunctionType);
@@ -54,7 +95,7 @@ namespace Org.Ml.Domain.Model.Gbm
             var binCollection = developmentFrame.GetBinCollection();
             var bestScores = new double[rowCount];
 
-            var container = new HistogramContainer(rowCount);
+            var container = new GbmGlobalArrays(rowCount);
             var blas = new DotNetBlas();
             var rng = new Random();
 
@@ -107,7 +148,7 @@ namespace Org.Ml.Domain.Model.Gbm
         }
 
 
-        private Tuple<GbmHyperParameterSearchResult, GbmModelDetail> BuildASingleModel(GbmTreeLearner treeLearner, GbmAlgorithmSettings algorithmSettings, HistogramContainer container, LossFunction loss, Dictionary<string, Bin> binCollection, int rowCount, IBlas blas)
+        private Tuple<GbmHyperParameterSearchResult, GbmModelDetail> BuildASingleModel(GbmTreeLearner treeLearner, GbmAlgorithmSettings algorithmSettings, GbmGlobalArrays container, LossFunction loss, Dictionary<string, Bin> binCollection, int rowCount, IBlas blas)
         {
             var watch = new Stopwatch();
             watch.Start();
@@ -167,7 +208,7 @@ namespace Org.Ml.Domain.Model.Gbm
                 HyperParameters = hyperParameters,
                 RuntimeDurationInSeconds = durationInSeconds
             };
-            if (settings.LossFunctionType == LossFunctionType.ClassificationBinary)
+            if (settings.LossFunctionType == LossFunctionType.CrossEntropy)
             {
                 var finalLoss = loss.GetLoss(scores);
                 searchResult.TrainingLoss = finalLoss.Item1;
@@ -176,9 +217,9 @@ namespace Org.Ml.Domain.Model.Gbm
                 searchResult.TrainingAuc = aucLoss.Item1.Auc;
                 searchResult.ValidationAuc = aucLoss.Item2 != null ? aucLoss.Item2.Auc : Double.NaN;
             }
-            else if (settings.LossFunctionType == LossFunctionType.RegressionL2)
+            else if (settings.LossFunctionType == LossFunctionType.LeastSquares)
             {
-                var l2Loss = loss.GetL2Loss(scores);
+                var l2Loss = loss.GetLeastSquaresLoss(scores);
                 var tOutput = l2Loss.Item1;
                 var vOutput = l2Loss.Item2;
                 searchResult.TrainingLoss = tOutput.ResidualSumOfSquares;

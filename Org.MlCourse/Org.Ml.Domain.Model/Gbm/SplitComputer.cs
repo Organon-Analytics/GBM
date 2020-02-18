@@ -8,10 +8,10 @@ namespace Org.Ml.Domain.Model
 {
     public class SplitComputer
     {
-        private readonly string _featureName;
+        private readonly string _featureName; //INCOME
         private BinType _binType;
         private readonly int _numBins;
-        private readonly IDictionary<int, BinInfo[]> _data;
+        private readonly IDictionary<int, BinInfo[]> _data; // 0, 1
 
         public SplitComputer(string featureName, int numBins, BinType binType)
         {
