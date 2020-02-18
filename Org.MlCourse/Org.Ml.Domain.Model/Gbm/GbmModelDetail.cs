@@ -15,7 +15,6 @@ namespace Org.Ml.Domain.Model.Gbm
         private readonly SumOfTrees _forest;
         private double _bias;
         private readonly List<LossPerIteration> _lossHistory;
-
         public GbmModelDetail(LossFunctionType lossFunctionType, Dictionary<string, Bin> binCollection)
         {
             _lossFunctionType = lossFunctionType;

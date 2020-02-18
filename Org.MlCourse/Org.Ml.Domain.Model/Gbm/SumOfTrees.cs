@@ -10,13 +10,10 @@ namespace Org.Ml.Domain.Model.Gbm
     public class SumOfTrees
     {
         private readonly List<GbmTree> _forest;
-
         public SumOfTrees()
         {
             _forest = new List<GbmTree>();
         }
-
-        public IList<GbmTree> Forest { get { return _forest; } }
 
         public void Add(GbmTree tree)
         {
@@ -36,16 +33,6 @@ namespace Org.Ml.Domain.Model.Gbm
                 }
             }
             return builder.ToString();
-        }
-
-        public SumOfTrees Clone()
-        {
-            var result = new SumOfTrees();
-            foreach (var tree in _forest)
-            {
-                result.Add(tree.Clone());
-            }
-            return result;
         }
 
         public IList<string> GetAllFeatures()

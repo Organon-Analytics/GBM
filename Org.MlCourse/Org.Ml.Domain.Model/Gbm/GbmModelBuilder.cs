@@ -88,22 +88,27 @@ namespace Org.Ml.Domain.Model.Gbm
             var treeLearner = new GbmTreeLearner(_algorithmSettings, _dataSettings, developmentFrame);
             // Initialize the private fields in treeLearner object
             treeLearner.Initialize();
-
+            // Create&initialize the loss function given the loss-function-type
             var loss = LossFunction.CreateLossFunction(_algorithmSettings.LossFunctionType);
             loss.Initialize(_algorithmSettings, _dataSettings, developmentFrame);
+            
             var rowCount = developmentFrame.GetRowCount();
             var binCollection = developmentFrame.GetBinCollection();
             var bestScores = new double[rowCount];
 
+            // Create and allocate memory for global arrays given the row-count of the frame
             var container = new GbmGlobalArrays(rowCount);
             var blas = new DotNetBlas();
-            var rng = new Random();
 
             GbmModelDetail modelDetail = null;
+            // predictions array stores final predictions
             var predictions = new double[rowCount];
+            // For each hyper-parameter set, the results must be stored. A collection is created
             var parameterSearchResults = new List<GbmHyperParameterSearchResult>();
+            // If SearchForHyperParameters = true, hyper parameter search should be done. Grid search is done here
             if (_algorithmSettings.SearchForHyperParameters)
             {
+                // Generate the set of hyper-parameters
                 var hyperParameterSets = GenerateHyperParameterSets(_algorithmSettings);
                 var trial = 0;
 
@@ -112,12 +117,14 @@ namespace Org.Ml.Domain.Model.Gbm
                 {
                     var loopWatch = new Stopwatch();
                     loopWatch.Start();
-
+                    // _algorithmSettings object must be updated with each hyper-parameter set
                     UpdateSettings(_algorithmSettings, parameters);
+                    // BuildASingleModel method returns the GBM model produced as a result of a single hyper-parameter set
                     var result = BuildASingleModel(treeLearner, _algorithmSettings, container, loss, binCollection, rowCount, blas);
                     var searchResult = result.Item1;
                     parameterSearchResults.Add(searchResult);
 
+                    // Update the best model and its hyper-parameters produced so far
                     var currentModelDetail = result.Item2;
                     var currentLoss = Double.IsNaN(searchResult.ValidationLoss)
                         ? searchResult.TrainingLoss
@@ -137,8 +144,9 @@ namespace Org.Ml.Domain.Model.Gbm
                 modelDetail = result.Item2;
                 loss.Convert(container.Scores, predictions);
             }
+            // Update the predictions
             loss.Convert(container.Scores, predictions);
-
+            // Create the results object
             _results = new GbmModelBuilderResults
             {
                 GbmModelDetail = modelDetail,
@@ -147,33 +155,46 @@ namespace Org.Ml.Domain.Model.Gbm
             };
         }
 
-
+        /// <summary>
+        /// Builds a Gbm model for a single hyper-parameter set.
+        /// The result returns the hyper-parameter set and the model corresponding to that set
+        /// </summary>
+        /// <param name="treeLearner"></param>
+        /// <param name="algorithmSettings"></param>
+        /// <param name="container"></param>
+        /// <param name="loss"></param>
+        /// <param name="binCollection"></param>
+        /// <param name="rowCount"></param>
+        /// <param name="blas"></param>
+        /// <returns></returns>
         private Tuple<GbmHyperParameterSearchResult, GbmModelDetail> BuildASingleModel(GbmTreeLearner treeLearner, GbmAlgorithmSettings algorithmSettings, GbmGlobalArrays container, LossFunction loss, Dictionary<string, Bin> binCollection, int rowCount, IBlas blas)
         {
             var watch = new Stopwatch();
             watch.Start();
 
+            //Initialize scores in the container
             loss.SetInitialScore(container.Scores);
             var fixedRate = algorithmSettings.LearningRate;
-            //var useLineSearch = algorithmSettings.UseLineSearchForLearningRate;
-
+            // Initialize GbmModelDetail
             var modelDetail = new GbmModelDetail(loss.GetLossFunctionType(), binCollection);
+            // Set the model constant(bias)
             modelDetail.SetBias(loss.GetInitialScore());
+            // Start building and adding individual trees to the GbmModelDetail
             for (var i = 0; i < algorithmSettings.NumIterations; i++)
             {
-                //if (((i + 1) % 100) == 0)
-                //{
-                //    LogHelper.LogInfo(
-                //        String.Format("Building Gbm model: {0} iterations completed in {1} seconds",
-                //            i + 1, modelWatch.Elapsed.TotalSeconds), taskId);
-                //}
+                // Update gradients and hessians using the current scores and the loss function
                 loss.UpdateGradients(container.Scores, container.Gradients, container.Hessians);
+                // Build the tree using the gradients, hessiansi and current scores
                 var tree = treeLearner.Train(container.Gradients, container.Hessians, container.Delta);
                 if (tree == null) continue;
 
+                // Scale the tree with the fixed learning rate
                 tree.Scale(fixedRate);
+                // Update the current scores
                 blas.Axpy(fixedRate, 0, rowCount, container.Delta, container.Scores);
+                // Compute the loss with the current scores
                 var losses = loss.GetLoss(container.Scores);
+                // Add loss and tree data to the modelDetail object
                 modelDetail.AddLoss(new LossPerIteration { TrainingLoss = losses.Item1, ValidationLoss = losses.Item2 });
                 modelDetail.Add(tree);
             }

@@ -5,6 +5,10 @@ using System.Text;
 
 namespace Org.Ml.Domain.Model.Gbm
 {
+    /// <summary>
+    /// GbmGlobalArrays is a container that holds some global arrays for GBM computations, such as
+    /// gradient, hessian, score arrays. Storing these arrays in a global object permits data re-use and proper encapsulation.
+    /// </summary>
     public class GbmGlobalArrays
     {
         private readonly int[] _rowIndices;

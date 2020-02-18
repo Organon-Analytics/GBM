@@ -47,11 +47,6 @@ namespace Org.Ml.Domain.Model.Gbm
             _initialScore = SetInitialScore();
         }
 
-        public override bool IsGood()
-        {
-            return true;
-        }
-
         public override void SetInitialScore(double[] scores)
         {
             _blas.Initialize(scores, _initialScore);
@@ -76,19 +71,9 @@ namespace Org.Ml.Domain.Model.Gbm
             return _initialScore;
         }
 
-        public override IDictionary<int, double> GetInitialScoreByClass()
-        {
-            throw new NotImplementedException();
-        }
-
         public override LossFunctionType GetLossFunctionType()
         {
             return LossFunctionType.LeastSquares;
-        }
-
-        public override bool IsConstantHessian()
-        {
-            return (_weightArray == null);
         }
 
         //TODO: Parallelize and pointerize below

@@ -8,22 +8,56 @@ namespace Org.Ml.Domain.Model.Gbm
 {
     /// <summary>
     /// A LossFunction abstractsand groups the necessary methods to build a Gbm model
-    /// Specifically, it returns the loss given the actual and predicted values
+    /// It returns the loss given the actual and predicted values among other things
     /// </summary>
     public abstract class LossFunction
     {
         public abstract void Initialize(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings, DataFrame frame);
-        public abstract bool IsGood();
+        /// <summary>
+        /// Initializes the scores
+        /// </summary>
+        /// <param name="scores"></param>
         public abstract void SetInitialScore(double[] scores);
+        /// <summary>
+        /// Returns the initial scores
+        /// </summary>
+        /// <returns></returns>
         public abstract double GetInitialScore();
-        public abstract IDictionary<int, double> GetInitialScoreByClass();
+        /// <summary>
+        /// Gradients vector is the 1st derivative of the loss with respect to the latest scores
+        /// It must be updated after scores are updated
+        /// </summary>
+        /// <param name="scores"></param>
+        /// <param name="gradients"></param>
+        /// <param name="hessians"></param>
         public abstract void UpdateGradients(double[] scores, double[] gradients, double[] hessians);
+        /// <summary>
+        /// Score corresponds to the sum of trees and the prediction is a function of score
+        /// Convert method transforms score to prediction
+        /// </summary>
+        /// <param name="score"></param>
+        /// <param name="output"></param>
         public abstract void Convert(double score, out double output);
         public abstract void Convert(double[] scores, double[] output);
+        /// <summary>
+        /// LineSearch performs a line-search for the update step for the given grid of learning-rate-multipliers
+        /// </summary>
+        /// <param name="scores"></param>
+        /// <param name="delta"></param>
+        /// <param name="grid"></param>
+        /// <returns></returns>
         public abstract double[] LineSearch(double[] scores, double[] delta, double[] grid);
         public abstract IDictionary<int, double> LineSearch(double[] scores, double[] delta, double[] grid, int[] nodes, int[] nodeIndices);
+        /// <summary>
+        /// Get the loss function type
+        /// </summary>
+        /// <returns></returns>
         public abstract LossFunctionType GetLossFunctionType();
-        public abstract bool IsConstantHessian();
+        /// <summary>
+        /// Get the loss value given the scores (loss is the distance between actual and predictions)
+        /// </summary>
+        /// <param name="scores"></param>
+        /// <returns></returns>
         public abstract Tuple<double, double> GetLoss(double[] scores);
 
         public virtual Tuple<LeastSquaresOutput, LeastSquaresOutput> GetLeastSquaresLoss(double[] scores)

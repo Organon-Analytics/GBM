@@ -89,11 +89,6 @@ namespace Org.Ml.Domain.Model.Gbm
             _initialScore = SetInitialScore();
         }
 
-        public override bool IsGood()
-        {
-            return true;
-        }
-
         public override void SetInitialScore(double[] scores)
         {
             _blas.Initialize(scores, _initialScore);
@@ -137,19 +132,9 @@ namespace Org.Ml.Domain.Model.Gbm
             return _initialScore;
         }
 
-        public override IDictionary<int, double> GetInitialScoreByClass()
-        {
-            throw new NotImplementedException();
-        }
-
         public override LossFunctionType GetLossFunctionType()
         {
             return LossFunctionType.CrossEntropy;
-        }
-
-        public override bool IsConstantHessian()
-        {
-            return false;
         }
 
         public override void UpdateGradients(double[] score, double[] gradients, double[] hessians)
