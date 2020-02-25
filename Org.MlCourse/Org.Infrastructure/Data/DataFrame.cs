@@ -15,6 +15,7 @@ namespace Org.Infrastructure.Data
         private IDictionary<string, List<int>> _rawCategorical;
         private IDictionary<string, List<float>> _rawNumerical;
         private IDictionary<string, int[]> _integerFrame;
+        private int _rowCount;
 
         private IDictionary<string, Action<string, string>> _actions;
         private Dictionary<string, Bin> _binCollection;
@@ -31,12 +32,6 @@ namespace Org.Infrastructure.Data
         {
             _blas = new DotNetBlas();
             _rng = new Random();
-
-            //_indices = new int[_baseFrame.RowCount];
-            //for (var i = 0; i < _indices.Length; i++)
-            //{
-            //    _indices[i] = i;
-            //}
         }
 
         public int[] GetIntegerArray(string columnName)
@@ -82,6 +77,7 @@ namespace Org.Infrastructure.Data
         {
             _columnCollection = collection;
             _binCollection = new Dictionary<string, Bin>();
+            _columnOrder = new Bijection<string, int>();
             _rawCategorical = new Dictionary<string, List<int>>();
             _rawNumerical = new Dictionary<string, List<float>>();
 
@@ -89,8 +85,8 @@ namespace Org.Infrastructure.Data
             foreach (var column in _columnCollection.Values)
             {
                 var name = column.Name;
-                //var order = column.Order;
-                //_columnOrder.Add(name, order);
+                var order = column.Order;
+                _columnOrder.Add(name, order);
                 if (column.MeasurementType == ColumnMeasurementType.Categorical)
                 {
                     _rawCategorical.Add(name, new List<int>(capacity));
@@ -125,26 +121,39 @@ namespace Org.Infrastructure.Data
             _rawNumerical[name].Add(flag ? f : Single.NaN);
         }
 
+        public void FinalizeAfterRead()
+        {
+            _rowCount = 1;
+            foreach (var item in _rawCategorical)
+            {
+                _rowCount = item.Value.Count;
+            }
+            foreach (var item in _rawNumerical)
+            {
+                _rowCount = item.Value.Count;
+            }
+        }
         public void SetBlas(IBlas blas)
         {
             _blas = blas;
         }
-        public void CreateCategoricalBins()
+
+        public void CreateBins(int maxBins)
         {
-            var categoricalKeys = _rawCategorical.Keys.ToList();
+            _indices = new int[_rowCount];
+            for (var i = 0; i < _indices.Length; i++)
+            {
+                _indices[i] = i;
+            }
+
             _integerFrame = new Dictionary<string, int[]>();
+            var categoricalKeys = _rawCategorical.Keys.ToList();
             foreach (var column in categoricalKeys)
             {
                 var list = _rawCategorical[column];
                 _integerFrame.Add(column, list.ToArray());
                 _rawCategorical.Remove(column);
             }
-        }
-
-        public void CreateNumericalBins(int maxBins)
-        {
-            if (_integerFrame == null)
-                _integerFrame = new Dictionary<string, int[]>();
 
             var helper = new StatsFunctions(_blas);
             foreach (var item in _rawNumerical)
@@ -203,14 +212,14 @@ namespace Org.Infrastructure.Data
             _randomTrainingIndices = list.ToArray();
         }
 
-        public IList<string> GetRandomInputList(double columnSamplingRate)
+        public IList<string> GetRandomInputList(IList<string> columnList, double columnSamplingRate)
         {
-            throw new NotImplementedException();
+            return columnList.Where(column => _rng.NextDouble() < columnSamplingRate).ToList();
         }
 
         public int GetRowCount()
         {
-            throw new NotImplementedException();
+            return _rowCount;
         }
 
         public IList<string> GetConstantColumns()

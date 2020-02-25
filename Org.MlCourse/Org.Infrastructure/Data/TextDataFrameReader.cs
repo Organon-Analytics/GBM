@@ -59,7 +59,7 @@ namespace Org.Infrastructure.Data
                     }
                 }
             }
-            //frame.Cleanup(new List<string>());
+            frame.FinalizeAfterRead();
             return frame;
         }
 

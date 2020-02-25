@@ -14,7 +14,7 @@
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -43,11 +44,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GbmModelBuildServiceTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Org.Infrastructure\Org.Infrastructure.csproj">
+      <Project>{f2162f23-568f-4ebc-95e6-856f32da2ae3}</Project>
+      <Name>Org.Infrastructure</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Org.Ml.DataAccess,\Org.Ml.DataAccess,.csproj">
+      <Project>{41a24bb4-1d74-4adb-8437-1f04f495be7a}</Project>
+      <Name>Org.Ml.DataAccess,</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Org.Ml.Domain.Model\Org.Ml.Domain.Model.csproj">
+      <Project>{2035d75c-78eb-44ca-8fcf-c07ba232ae06}</Project>
+      <Name>Org.Ml.Domain.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Org.Ml.Domain.Service\Org.Ml.Domain.Service.csproj">
+      <Project>{a0885e8b-dff5-4f30-85bd-d9e1fc7392a0}</Project>
+      <Name>Org.Ml.Domain.Service</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

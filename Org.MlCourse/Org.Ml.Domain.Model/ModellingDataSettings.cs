@@ -18,5 +18,12 @@ namespace Org.Ml.Domain.Model
         public string PositiveCategory { get; set; }
         public string NegativeCategory { get; set; }
         public double TrainingRatio { get; set; }
+
+
+        public IDataSourceLocator ScoringInputDataSource { get; set; }
+        public IDataSourceLocator ScoringOutputDataSource { get; set; }
+        public IDataSourceLocator DiagnosticsDataSource { get; set; }
+        public IList<string> IncludedColumnsForScoring { get; set; }
+        public string ScoreColumnName { get; set; }
     }
 }

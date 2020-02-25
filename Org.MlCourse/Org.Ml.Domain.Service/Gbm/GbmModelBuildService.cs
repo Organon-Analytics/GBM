@@ -11,20 +11,21 @@ namespace Org.Ml.Domain.Service.Gbm
     {
         private readonly GbmAlgorithmSettings _algoSettings;
         private readonly ModellingDataSettings _dataSettings;
-        public GbmModelBuildService(GbmAlgorithmSettings algoSettings, ModellingDataSettings dataSettings)
+        private readonly GbmOutputSettings _outputSettings;
+        public GbmModelBuildService(GbmAlgorithmSettings algoSettings, ModellingDataSettings dataSettings, GbmOutputSettings outputSettings)
         {
             _algoSettings = algoSettings;
             _dataSettings = dataSettings;
+            _outputSettings = outputSettings;
         }
         public void Execute(int numOfThreads)
         {
-            ValidateAlgorithmSettings(_algoSettings);
-            ValidateDataSettings(_dataSettings);
-            var trainingFrame = ReadDataFrame(_dataSettings);
-            var validationFrame = ReadDataFrame(_dataSettings);
-            var testFrame = ReadDataFrame(_dataSettings);
-            PrepareData(trainingFrame);
-            var model = BuildModel(trainingFrame, validationFrame);
+            //ValidateAlgorithmSettings(_algoSettings);
+            //ValidateDataSettings(_dataSettings);
+            var developmentFrame = ReadDevelopmentDataFrame(_dataSettings);
+            var testFrame = ReadTestDataFrame(_dataSettings);
+            PrepareData(_algoSettings, _dataSettings, developmentFrame);
+            var model = BuildModel(_algoSettings, _dataSettings, _outputSettings, developmentFrame, testFrame);
 
         }
 
@@ -38,19 +39,42 @@ namespace Org.Ml.Domain.Service.Gbm
             throw new NotImplementedException();
         }
 
-        private DataFrame ReadDataFrame(ModellingDataSettings dataSettings)
+        private DataFrame ReadDevelopmentDataFrame(ModellingDataSettings dataSettings)
         {
-            throw new NotImplementedException();
+            var source = dataSettings.DevelopmentDataSource;
+            var parameters = dataSettings.DevelopmentFrameSamplingParameters;
+            var developmentFrameReader = DataFrameReader.GetDataFrameReader(source);
+            var developmentFrame = developmentFrameReader.Read(source, parameters);
+            return developmentFrame;
         }
 
-        private void PrepareData(DataFrame frame)
+        private DataFrame ReadTestDataFrame(ModellingDataSettings dataSettings)
         {
-            throw new NotImplementedException();
+            var source = dataSettings.TestDataSource;
+            if (source == null) return null;
+            var parameters = dataSettings.TestFrameSamplingParameters;
+            var developmentFrameReader = DataFrameReader.GetDataFrameReader(source);
+            var developmentFrame = developmentFrameReader.Read(source, parameters);
+            return developmentFrame;
         }
 
-        private GbmModel BuildModel(DataFrame trainingFrame, DataFrame validationFrame)
+        private void PrepareData(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings, DataFrame developmentFrame)
         {
-            throw new NotImplementedException();
+            developmentFrame.CreateBins(algorithmSettings.MaxBins);
+            developmentFrame.Partition(dataSettings.TrainingRatio);
+        }
+
+        private GbmModelBuilderResults BuildModel(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings,
+                                                  GbmOutputSettings outputSettings, DataFrame developmentFrame, DataFrame testFrame)
+        {
+            var modelBuilder = new GbmModelBuilder(algorithmSettings, dataSettings, outputSettings);
+            modelBuilder.SetFrame(SampleType.Development, developmentFrame);
+            if(testFrame != null)
+            {
+                modelBuilder.SetFrame(SampleType.Test, testFrame);
+            }
+            modelBuilder.Execute(1);
+            return modelBuilder.GbmModelBuilderResults;
         }
     }
 }

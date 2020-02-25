@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.Infrastructure.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,8 +9,13 @@ namespace Org.Ml.Tests
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
+            var test = new GbmModelBuildServiceTest();
+            test.Execute();
+
+            Console.WriteLine("Computation finished");
+            Console.ReadLine();
         }
     }
 }

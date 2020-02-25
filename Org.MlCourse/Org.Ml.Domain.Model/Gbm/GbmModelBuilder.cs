@@ -3,6 +3,7 @@ using Org.Infrastructure.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace Org.Ml.Domain.Model.Gbm
@@ -18,6 +19,7 @@ namespace Org.Ml.Domain.Model.Gbm
     {
         private readonly GbmAlgorithmSettings _algorithmSettings;
         private readonly ModellingDataSettings _dataSettings;
+        private readonly GbmOutputSettings _outputSettings;
         /// <summary>
         /// Multiple data frames are needed: 
         /// Development sample is used to build and validate the model
@@ -34,10 +36,11 @@ namespace Org.Ml.Domain.Model.Gbm
         /// </summary>
         /// <param name="algorithmSettings"></param>
         /// <param name="dataSettings"></param>
-        public GbmModelBuilder(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings)
+        public GbmModelBuilder(GbmAlgorithmSettings algorithmSettings, ModellingDataSettings dataSettings, GbmOutputSettings outputSettings)
         {
             _algorithmSettings = algorithmSettings;
             _dataSettings = dataSettings;
+            _outputSettings = outputSettings;
 
             _frames = new Dictionary<SampleType, DataFrame>();
         }
@@ -111,7 +114,7 @@ namespace Org.Ml.Domain.Model.Gbm
                 // Generate the set of hyper-parameters
                 var hyperParameterSets = GenerateHyperParameterSets(_algorithmSettings);
                 var trial = 0;
-
+                PrepareFiles();
                 var minimumLoss = Double.MaxValue;
                 foreach (var parameters in hyperParameterSets)
                 {
@@ -135,6 +138,7 @@ namespace Org.Ml.Domain.Model.Gbm
                         modelDetail = currentModelDetail;
                         blas.Copy(container.Scores, bestScores, container.Scores.Length);
                     }
+                    PrintHyperParameterSearchOutput(searchResult);
                     Console.WriteLine("Computation for the hyper-parameter set: {0} finished in {1} seconds", trial++, loopWatch.Elapsed.TotalSeconds);
                 }
             }
@@ -146,6 +150,7 @@ namespace Org.Ml.Domain.Model.Gbm
             }
             // Update the predictions
             loss.Convert(container.Scores, predictions);
+
             // Create the results object
             _results = new GbmModelBuilderResults
             {
@@ -153,6 +158,11 @@ namespace Org.Ml.Domain.Model.Gbm
                 ParameterSearchResults = parameterSearchResults,
                 Predictions = predictions
             };
+
+            #region PrintScores
+            PrintModelSql();
+            PrintLossHistory();
+            #endregion
         }
 
         /// <summary>
@@ -200,6 +210,140 @@ namespace Org.Ml.Domain.Model.Gbm
             }
             var searchResult = GetSearchResult(algorithmSettings, watch.Elapsed.TotalSeconds, loss, container.Scores);
             return new Tuple<GbmHyperParameterSearchResult, GbmModelDetail>(searchResult, modelDetail);
+        }
+
+        private void PrepareFiles()
+        {
+            var baseDirectory = _outputSettings.BaseDirectory;
+            if (!Directory.Exists(baseDirectory))
+            {
+                Directory.CreateDirectory(baseDirectory);
+            }
+            var outputFolder = _outputSettings.GetOutputFolder();
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+            var outputFile = _outputSettings.GetHyperParameterReportFileName();
+            using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
+            {
+                using (var writer = new StreamWriter(stream))
+                {
+                    writer.AutoFlush = true;
+                    switch (_algorithmSettings.LossFunctionType)
+                    {
+                        case LossFunctionType.CrossEntropy:
+                            writer.WriteLine(
+                                "LearningRate;RowSamplingRate;ColSamplingRate;MaxLeaves;MaxCategory;MaxIterations;TrainingLoss; ValidationLoss;TrainingAuc;ValidationAuc;DurationInSeconds");
+                            break;
+                        case LossFunctionType.LeastSquares:
+                            writer.WriteLine(
+                                "LearningRate;RowSamplingRate;ColSamplingRate;MaxLeaves;MaxCategory;MaxIterations;TrainingLoss; ValidationLoss;TrainingR2;ValidationR2;DurationInSeconds");
+                            break;
+                        default:
+                            writer.WriteLine(
+                                "LearningRate;RowSamplingRate;ColSamplingRate;MaxLeaves;MaxCategory;MaxIterations;TrainingLoss; ValidationLoss;DurationInSeconds");
+                            break;
+                    }
+                }
+            }
+        }
+        private void PrintHyperParameterSearchOutput(GbmHyperParameterSearchResult result)
+        {
+            var outputFile = _outputSettings.GetHyperParameterReportFileName();
+            using (var stream = new FileStream(outputFile, FileMode.Append, FileAccess.Write))
+            {
+                using (var writer = new StreamWriter(stream))
+                {
+                    var p = result.HyperParameters;
+                    var learningRate = p.LearningRate;
+                    var rowSamplingRate = p.RowSamplingRate;
+                    var colSamplingRate = p.ColumnSamplingRate;
+                    var maxLeaves = p.MaxTreeLeaves;
+                    var numIterations = p.MaxIterations;
+                    var tLoss = result.TrainingLoss;
+                    var vLoss = result.ValidationLoss;
+                    var tAuc = result.TrainingAuc;
+                    var vAuc = result.ValidationAuc;
+                    var tR2 = result.TrainingR2;
+                    var vR2 = result.ValidationR2;
+                    var duration = result.RuntimeDurationInSeconds;
+                    switch (_algorithmSettings.LossFunctionType)
+                    {
+                        case LossFunctionType.CrossEntropy:
+                            writer.WriteLine("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9}", learningRate,
+                                rowSamplingRate, colSamplingRate, maxLeaves, numIterations, tLoss, vLoss,
+                                tAuc, vAuc, duration);
+                            break;
+                        case LossFunctionType.LeastSquares:
+                            writer.WriteLine("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9}", learningRate,
+                                rowSamplingRate, colSamplingRate, maxLeaves, numIterations, tLoss, vLoss,
+                                tR2, vR2, duration);
+                            break;
+                        default:
+                            writer.WriteLine("{0};{1};{2};{3};{4};{5};{6};{7}", learningRate,
+                                rowSamplingRate, colSamplingRate, maxLeaves, numIterations, tLoss, vLoss,
+                                duration);
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void PrintModelSql()
+        {
+            var baseDirectory = _outputSettings.BaseDirectory;
+            if (!Directory.Exists(baseDirectory))
+            {
+                Directory.CreateDirectory(baseDirectory);
+            }
+            var outputFolder = _outputSettings.GetOutputFolder();
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+            var outputFile = _outputSettings.GetSqlFileName();
+            using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
+            {
+                using (var writer = new StreamWriter(stream))
+                {
+                    writer.AutoFlush = true;
+                    var locator = _dataSettings.ScoringInputDataSource;
+                    var includedColumns = _dataSettings.IncludedColumnsForScoring;
+                    var scoreColumnName = _dataSettings.ScoreColumnName;
+                    var modelSql = _results.GbmModelDetail.ToSql(includedColumns, scoreColumnName, locator.FullName);
+                    writer.WriteLine(modelSql);
+                }
+            }
+        }
+
+        private void PrintLossHistory()
+        {
+            var baseDirectory = _outputSettings.BaseDirectory;
+            if (!Directory.Exists(baseDirectory))
+            {
+                Directory.CreateDirectory(baseDirectory);
+            }
+            var outputFolder = _outputSettings.GetOutputFolder();
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+            var outputFile = _outputSettings.GetLossHistoryFileName();
+            using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
+            {
+                using (var writer = new StreamWriter(stream))
+                {
+                    writer.AutoFlush = true;
+                    writer.WriteLine("{0};{1};{2}", "ITERATION", "TRAINING_LOSS", "VALIDATION_LOSS");
+                    var history = _results.GbmModelDetail.LossHistory;
+                    for (int i = 0; i < history.Count; i++)
+                    {
+                        var loss = history[i];
+                        writer.WriteLine("{0};{1};{2}", 1 + i, loss.TrainingLoss, loss.ValidationLoss);
+                    }
+                }
+            }
         }
 
         #region Hyper-parameter search

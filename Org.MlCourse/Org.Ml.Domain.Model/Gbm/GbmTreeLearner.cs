@@ -69,7 +69,7 @@ namespace Org.Ml.Domain.Model.Gbm
             //Randomize rows
             _frame.RandomizeTrainingIndices(_algorithmSettings.RowSamplingRate);
             //Randomize features
-            var sampledFeatures = _frame.GetRandomInputList(_algorithmSettings.ColumnSamplingRate);
+            var sampledFeatures = _frame.GetRandomInputList(_eligibleInputColumns, _algorithmSettings.ColumnSamplingRate);
             //Get pointers to training and validation indices
             var sampledTrainingIndices = _frame.GetRandomTrainingIndices();
             var validationIndices = _frame.GetValidationIndices();

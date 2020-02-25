@@ -4,16 +4,11 @@ using System.Text;
 
 namespace Org.Infrastructure.Data
 {
-    public class BinInfo
+    public struct BinInfo
     {
         private double _sumWeights;
         private double _sumGradients;
         private double _sumHessians;
-
-        public BinInfo()
-        {
-        }
-
         public BinInfo(double sumWeight, double sumGradient, double sumHessian)
         {
             _sumWeights = sumWeight;

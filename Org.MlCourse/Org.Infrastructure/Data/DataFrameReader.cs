@@ -47,5 +47,17 @@ namespace Org.Infrastructure.Data
             }
             return builder.ToString();
         }
+
+        public static TextDataFrameReader GetDataFrameReader(IDataSourceLocator source)
+        {
+            if(source.DataSourceType == DataSourceType.TextFile)
+            {
+                return new TextDataFrameReader();
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+        }
     }
 }
